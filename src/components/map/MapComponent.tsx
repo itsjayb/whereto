@@ -43,6 +43,11 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
     toggleTooltips,
   } = useMapLogic({ apiKey, selectedType });
 
+  // Debug logging
+  console.log('MapComponent - location:', location);
+  console.log('MapComponent - showCustomTooltip:', showCustomTooltip);
+  console.log('MapComponent - selectedVenue:', selectedVenue?.name);
+
   const { mapRef, zoomIn, zoomOut, centerOnUserLocation } = useMapControls({
     region,
     location: location ? location.coords : null,
@@ -138,6 +143,7 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
           <VenueTooltip
             place={selectedVenue}
             onClose={handleTooltipClose}
+            userLocation={location ? location.coords : null}
           />
         </View>
       )}
