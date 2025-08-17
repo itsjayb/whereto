@@ -27,7 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>com.yourcompany.whereto</string>
+          <string>com.where.to</string>
         </array>
       </dict>
     </array>
