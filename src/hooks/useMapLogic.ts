@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { Region } from 'react-native-maps';
 import { PlaceResult, VenueType } from '../types/venue';
@@ -23,6 +23,7 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
   const [showCustomTooltip, setShowCustomTooltip] = useState(false);
   const [alwaysShowTooltips, setAlwaysShowTooltips] = useState(false);
   const [isUpdatingVenues, setIsUpdatingVenues] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const lastSearchRadius = useRef(SEARCH_RADIUS.DEFAULT);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -104,14 +105,19 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
   useEffect(() => {
     (async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        // Check current permission status
+        let { status } = await Location.getForegroundPermissionsAsync();
+        
         if (status !== 'granted') {
-          setErrorMsg('Permission to access location was denied');
-          Alert.alert('Permission Denied', 'Location permission is required to show your position on the map.');
+          // Show modal only if permission is not granted
+          console.log('Location permission not granted, showing modal');
+          setShowLocationModal(true);
           setIsLoading(false);
           return;
         }
 
+        // Permission is granted, get current location
+        console.log('Location permission granted, getting current location');
         let currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
@@ -179,6 +185,87 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     setAlwaysShowTooltips(!alwaysShowTooltips);
   }, [alwaysShowTooltips]);
 
+  // Handle location permission modal
+  const handleRequestLocationPermission = useCallback(async () => {
+    setShowLocationModal(false);
+    setIsLoading(true);
+    
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
+        // Show a single, clear alert about permission being denied
+        Alert.alert(
+          'Location Permission Required',
+          'This app needs location access to show nearby venues. Please enable location permissions in your device settings.',
+          [
+            { text: 'OK', style: 'default' },
+            { 
+              text: 'Open Settings', 
+              onPress: async () => {
+                try {
+                  if (Platform.OS === 'ios') {
+                    // Open the app's settings page in iOS Settings
+                    await Linking.openURL('app-settings:');
+                  } else {
+                    // For Android, we can open the app's settings page
+                    await Linking.openSettings();
+                  }
+                } catch (error) {
+                  console.error('Failed to open settings:', error);
+                  // Fallback: show instructions
+                  Alert.alert(
+                    'Open Settings',
+                    'Go to Settings > Privacy & Security > Location Services > whereto and enable location access.',
+                    [{ text: 'OK', style: 'default' }]
+                  );
+                }
+              }
+            }
+          ]
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      let currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setLocation(currentLocation);
+      
+      const initialRegion = {
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+      setRegion(initialRegion);
+      
+      // Calculate initial radius
+      const initialRadius = calculateRadiusFromRegion(initialRegion);
+      setCurrentRadius(initialRadius);
+      lastSearchRadius.current = initialRadius;
+    } catch (error: any) {
+      console.error('Error getting location:', error);
+      setErrorMsg('Error getting location: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [calculateRadiusFromRegion]);
+
+  const handleDismissLocationModal = useCallback(() => {
+    setShowLocationModal(false);
+    setErrorMsg('Location permission is required to use this app. Please enable location access in your device settings.');
+    setIsLoading(false);
+    
+    // Show a helpful message when user dismisses the modal
+    Alert.alert(
+      'Location Access Required',
+      'This app works best with location access to show nearby venues. You can enable location permissions later in your device settings.',
+      [{ text: 'OK', style: 'default' }]
+    );
+  }, []);
+
   return {
     // State
     location,
@@ -192,11 +279,14 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     showCustomTooltip,
     alwaysShowTooltips,
     isUpdatingVenues,
+    showLocationModal,
     
     // Handlers
     handleRegionChangeComplete,
     handleMarkerPress,
     handleTooltipClose,
     toggleTooltips,
+    handleRequestLocationPermission,
+    handleDismissLocationModal,
   };
 };

@@ -16,6 +16,7 @@ import MapStatusIndicators from './MapStatusIndicators';
 import VenueMarkers from './VenueMarkers';
 import TopTicker from '../TopTicker';
 import VenueTypeSelector from '../VenueTypeSelector';
+import LocationPermissionModal from '../LocationPermissionModal';
 
 interface MapComponentProps {
   apiKey: string;
@@ -37,16 +38,20 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
     showCustomTooltip,
     alwaysShowTooltips,
     isUpdatingVenues,
+    showLocationModal,
     handleRegionChangeComplete,
     handleMarkerPress,
     handleTooltipClose,
     toggleTooltips,
+    handleRequestLocationPermission,
+    handleDismissLocationModal,
   } = useMapLogic({ apiKey, selectedType });
 
   // Debug logging
   console.log('MapComponent - location:', location);
   console.log('MapComponent - showCustomTooltip:', showCustomTooltip);
   console.log('MapComponent - selectedVenue:', selectedVenue?.name);
+  console.log('MapComponent - showLocationModal:', showLocationModal);
 
   const { mapRef, zoomIn, zoomOut, centerOnUserLocation } = useMapControls({
     region,
@@ -178,6 +183,13 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
           )}
         </View>
       </View>
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        visible={showLocationModal}
+        onRequestPermission={handleRequestLocationPermission}
+        onDismiss={handleDismissLocationModal}
+      />
     </View>
   );
 }
