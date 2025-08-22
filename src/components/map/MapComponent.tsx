@@ -54,6 +54,7 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
     region,
     location: location ? location.coords : null,
     mapRef,
+    onTooltipClose: handleTooltipClose,
   });
 
   if (isLoading) {

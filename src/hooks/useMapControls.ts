@@ -5,10 +5,11 @@ import MapView from 'react-native-maps';
 interface UseMapControlsProps {
   region: Region;
   location: { latitude: number; longitude: number } | null;
-  mapRef: RefObject<MapView>;
+  mapRef: RefObject<MapView | null>;
+  onTooltipClose?: () => void;
 }
 
-export const useMapControls = ({ region, location, mapRef }: UseMapControlsProps) => {
+export const useMapControls = ({ region, location, mapRef, onTooltipClose }: UseMapControlsProps) => {
 
   // Zoom controls
   const zoomByFactor = useCallback((factor: number) => {
@@ -37,11 +38,16 @@ export const useMapControls = ({ region, location, mapRef }: UseMapControlsProps
       mapRef.current.animateToRegion({
         latitude: location.latitude,
         longitude: location.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitudeDelta: 0.3522,
+        longitudeDelta: 0.3521,
       }, 1000); // 1 second animation
+      
+      // Close tooltip if callback is provided
+      if (onTooltipClose) {
+        onTooltipClose();
+      }
     }
-  }, [location, mapRef]);
+  }, [location, mapRef, onTooltipClose]);
 
   return {
     zoomIn,

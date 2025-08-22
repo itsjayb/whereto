@@ -127,8 +127,8 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
         const initialRegion = {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
+          latitudeDelta: 0.5522,
+          longitudeDelta: 0.5521,
         };
         setRegion(initialRegion);
         
