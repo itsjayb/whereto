@@ -1,4 +1,4 @@
-package com.yourcompany.whereto
+package com.where.to
 
 import android.os.Build
 import android.os.Bundle

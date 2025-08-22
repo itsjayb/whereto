@@ -14,8 +14,10 @@ import MapControls from './MapControls';
 import VenueTooltip from './VenueTooltip';
 import MapStatusIndicators from './MapStatusIndicators';
 import VenueMarkers from './VenueMarkers';
+import UserMarkers from './UserMarkers';
 import TopTicker from '../TopTicker';
 import VenueTypeSelector from '../VenueTypeSelector';
+import LocationPermissionModal from '../LocationPermissionModal';
 
 interface MapComponentProps {
   apiKey: string;
@@ -37,20 +39,21 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
     showCustomTooltip,
     alwaysShowTooltips,
     isUpdatingVenues,
+    showLocationModal,
+    showUserMarkers,
+    mapRef,
     handleRegionChangeComplete,
     handleMarkerPress,
     handleTooltipClose,
     toggleTooltips,
+    handleRequestLocationPermission,
+    handleDismissLocationModal,
   } = useMapLogic({ apiKey, selectedType });
 
-  // Debug logging
-  console.log('MapComponent - location:', location);
-  console.log('MapComponent - showCustomTooltip:', showCustomTooltip);
-  console.log('MapComponent - selectedVenue:', selectedVenue?.name);
-
-  const { mapRef, zoomIn, zoomOut, centerOnUserLocation } = useMapControls({
+  const { zoomIn, zoomOut, centerOnUserLocation } = useMapControls({
     region,
     location: location ? location.coords : null,
+    mapRef,
   });
 
   if (isLoading) {
@@ -105,6 +108,12 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
           venues={venues}
           alwaysShowTooltips={alwaysShowTooltips}
           onMarkerPress={handleMarkerPress}
+        />
+
+        {/* User markers */}
+        <UserMarkers
+          selectedVenue={selectedVenue}
+          showUsers={showUserMarkers}
         />
       </MapView>
 
@@ -178,6 +187,13 @@ export default function MapComponent({ apiKey, selectedType, onSelectVenueType }
           )}
         </View>
       </View>
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        visible={showLocationModal}
+        onRequestPermission={handleRequestLocationPermission}
+        onDismiss={handleDismissLocationModal}
+      />
     </View>
   );
 }

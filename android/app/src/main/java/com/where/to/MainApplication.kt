@@ -1,4 +1,4 @@
-package com.yourcompany.whereto
+package com.where.to
 
 import android.app.Application
 import android.content.res.Configuration

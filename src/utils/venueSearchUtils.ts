@@ -1,4 +1,4 @@
-import { PlaceResult } from './VenueTooltip';
+import { PlaceResult } from '../types/venue';
 
 // Define place types for better search results
 export const getPlaceTypes = (selectedType: 'bars' | 'clubs' | 'lounge' | null) => {
@@ -82,12 +82,11 @@ export const fetchVenuesWithRadius = async (
       .join('&');
 
     const url = `${baseUrl}?${params}`;
-    console.log(`Searching venues with radius ${radius}m:`, url);
+
     
     const res = await fetch(url);
     const data = await res.json();
 
-    console.log('Places API response:', data);
 
     if (data.status === 'OK') {
       const results: PlaceResult[] = Array.isArray(data.results) ? data.results : [];
@@ -98,7 +97,6 @@ export const fetchVenuesWithRadius = async (
       // Limit to 20 results
       return filteredResults.slice(0, 20);
     } else if (data.status === 'ZERO_RESULTS') {
-      console.log('No venues found for the selected type');
       return [];
     } else {
       console.warn('Places API error:', data.status, data.error_message);

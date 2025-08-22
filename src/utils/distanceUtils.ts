@@ -7,7 +7,6 @@ export const calculateDistance = (
   lat2: number,
   lon2: number
 ): number => {
-  console.log('calculateDistance called with:', { lat1, lon1, lat2, lon2 });
   
   const R = 6371; // Radius of the Earth in kilometers
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -21,13 +20,11 @@ export const calculateDistance = (
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in kilometers
   
-  console.log('calculateDistance result:', distance, 'km');
   return distance;
 };
 
 // Estimate travel time based on distance and mode of transportation
 export const estimateTravelTime = (distanceKm: number, mode: 'walking' | 'driving' | 'transit' = 'driving'): string => {
-  console.log('estimateTravelTime called with:', { distanceKm, mode });
   
   let speedKmH: number;
   
@@ -59,13 +56,11 @@ export const estimateTravelTime = (distanceKm: number, mode: 'walking' | 'drivin
     result = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
   
-  console.log('estimateTravelTime result:', result);
   return result;
 };
 
 // Format distance for display
 export const formatDistance = (distanceKm: number): string => {
-  console.log('formatDistance called with:', distanceKm);
   
   let result: string;
   if (distanceKm < 1) {
@@ -76,7 +71,6 @@ export const formatDistance = (distanceKm: number): string => {
     result = `${Math.round(distanceKm)}km`;
   }
   
-  console.log('formatDistance result:', result);
   return result;
 };
 
@@ -85,12 +79,10 @@ export const getMapsUrl = (destinationLat: number, destinationLng: number): stri
   if (Platform.OS === 'ios') {
     // Use Apple Maps on iOS
     const url = `http://maps.apple.com/?daddr=${destinationLat},${destinationLng}&dirflg=d`;
-    console.log('getMapsUrl generated (iOS - Apple Maps):', url);
     return url;
   } else {
     // Use Google Maps on Android and other platforms
     const url = `https://www.google.com/maps/dir/?api=1&destination=${destinationLat},${destinationLng}`;
-    console.log('getMapsUrl generated (Android - Google Maps):', url);
     return url;
   }
 };
@@ -101,4 +93,3 @@ export const getGoogleMapsUrl = getMapsUrl;
 // Test the distance calculation with known coordinates
 // New York City to Los Angeles (should be ~4000km)
 const testDistance = calculateDistance(40.7128, -74.0060, 34.0522, -118.2437);
-console.log('Test distance calculation (NYC to LA):', testDistance, 'km');

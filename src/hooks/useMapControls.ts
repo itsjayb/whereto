@@ -1,14 +1,14 @@
-import { useRef, useCallback } from 'react';
+import { useCallback, RefObject } from 'react';
 import { Region } from 'react-native-maps';
 import MapView from 'react-native-maps';
 
 interface UseMapControlsProps {
   region: Region;
   location: { latitude: number; longitude: number } | null;
+  mapRef: RefObject<MapView>;
 }
 
-export const useMapControls = ({ region, location }: UseMapControlsProps) => {
-  const mapRef = useRef<MapView>(null);
+export const useMapControls = ({ region, location, mapRef }: UseMapControlsProps) => {
 
   // Zoom controls
   const zoomByFactor = useCallback((factor: number) => {
@@ -26,7 +26,7 @@ export const useMapControls = ({ region, location }: UseMapControlsProps) => {
       },
       250
     );
-  }, [region]);
+  }, [region, mapRef]);
 
   const zoomIn = useCallback(() => zoomByFactor(0.5), [zoomByFactor]);
   const zoomOut = useCallback(() => zoomByFactor(2), [zoomByFactor]);
@@ -41,10 +41,9 @@ export const useMapControls = ({ region, location }: UseMapControlsProps) => {
         longitudeDelta: 0.0421,
       }, 1000); // 1 second animation
     }
-  }, [location]);
+  }, [location, mapRef]);
 
   return {
-    mapRef,
     zoomIn,
     zoomOut,
     centerOnUserLocation,
