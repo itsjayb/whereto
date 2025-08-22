@@ -4,6 +4,23 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { PlaceResult } from '../../types/venue';
 import { calculateDistance, estimateTravelTime, formatDistance, getMapsUrl } from '../../utils/distanceUtils';
 
+// Helper functions for busyness display
+const getBusynessColor = (busyness: number): string => {
+  if (busyness <= 20) return '#4CAF50'; // Green - Not busy
+  if (busyness <= 40) return '#8BC34A'; // Light green - Somewhat busy
+  if (busyness <= 60) return '#FFC107'; // Yellow - Moderately busy
+  if (busyness <= 80) return '#FF9800'; // Orange - Busy
+  return '#F44336'; // Red - Very busy
+};
+
+const getBusynessLabel = (busyness: number): string => {
+  if (busyness <= 20) return 'Not Busy';
+  if (busyness <= 40) return 'Somewhat Busy';
+  if (busyness <= 60) return 'Moderately Busy';
+  if (busyness <= 80) return 'Busy';
+  return 'Very Busy';
+};
+
 interface VenueTooltipProps {
   place: PlaceResult;
   onClose: () => void;
@@ -11,9 +28,6 @@ interface VenueTooltipProps {
 }
 
 export default function VenueTooltip({ place, onClose, userLocation }: VenueTooltipProps) {
-  // Debug logging
-  console.log('VenueTooltip - userLocation:', userLocation);
-  console.log('VenueTooltip - place:', place.name, place.geometry.location);
 
   // Calculate distance and travel time if user location is available
   const distance = userLocation ? calculateDistance(
@@ -26,12 +40,8 @@ export default function VenueTooltip({ place, onClose, userLocation }: VenueTool
   const travelTime = distance ? estimateTravelTime(distance) : null;
   const formattedDistance = distance ? formatDistance(distance) : null;
 
-  console.log('VenueTooltip - calculated distance:', distance, 'formatted:', formattedDistance, 'time:', travelTime);
-
   const handleMapsPress = () => {
-    console.log('Maps button pressed for:', place.name);
     const mapsUrl = getMapsUrl(place.geometry.location.lat, place.geometry.location.lng);
-    console.log('Opening maps URL:', mapsUrl);
     Linking.openURL(mapsUrl);
   };
 
@@ -45,49 +55,136 @@ export default function VenueTooltip({ place, onClose, userLocation }: VenueTool
       </View>
       
       <View style={styles.tooltipContent}>
-        {/* Rating */}
-        {place.rating && (
-          <View style={styles.infoRow}>
-            <MaterialIcons name="star" size={14} color="#FFD700" />
-            <Text style={styles.infoText}>
-              {place.rating} ({place.rating >= 4.0 ? 'Excellent' : place.rating >= 3.0 ? 'Good' : 'Fair'})
-            </Text>
+        <View style={styles.mainInfoContainer}>
+          {/* Left side - Basic venue info */}
+          <View style={styles.leftInfo}>
+            {/* Rating */}
+            {place.rating && (
+              <View style={styles.infoRow}>
+                <MaterialIcons name="star" size={14} color="#FFD700" />
+                <Text style={styles.infoText}>
+                  {place.rating} ({place.rating >= 4.0 ? 'Excellent' : place.rating >= 3.0 ? 'Good' : 'Fair'})
+                </Text>
+              </View>
+            )}
+            
+            {/* Address */}
+            {place.vicinity && (
+              <View style={styles.infoRow}>
+                <MaterialIcons name="location-on" size={14} color="#666" />
+                <Text style={styles.infoText}>{place.vicinity}</Text>
+              </View>
+            )}
+            
+            {/* Distance and Travel Time */}
+            <View style={styles.infoRow}>
+              <MaterialIcons name="directions-car" size={14} color="#666" />
+              <Text style={styles.infoText}>
+                {formattedDistance && travelTime 
+                  ? `${formattedDistance} • ${travelTime}`
+                  : userLocation 
+                    ? 'Calculating...' 
+                    : 'Location not available'
+                }
+              </Text>
+            </View>
+            
+            {/* Opening Status */}
+            {place.opening_hours?.open_now !== undefined && (
+              <View style={styles.infoRow}>
+                <MaterialIcons 
+                  name={place.opening_hours.open_now ? "check-circle" : "cancel"} 
+                  size={14} 
+                  color={place.opening_hours.open_now ? "#4CAF50" : "#F44336"} 
+                />
+                <Text style={[styles.infoText, { color: place.opening_hours.open_now ? "#4CAF50" : "#F44336" }]}>
+                  {place.opening_hours.open_now ? 'Open Now' : 'Closed'}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-        
-        {/* Address */}
-        {place.vicinity && (
-          <View style={styles.infoRow}>
-            <MaterialIcons name="location-on" size={14} color="#666" />
-            <Text style={styles.infoText}>{place.vicinity}</Text>
-          </View>
-        )}
-        
-        {/* Distance and Travel Time - Always show for debugging */}
-        <View style={styles.infoRow}>
-          <MaterialIcons name="directions-car" size={14} color="#666" />
-          <Text style={styles.infoText}>
-            {formattedDistance && travelTime 
-              ? `${formattedDistance} • ${travelTime}`
-              : userLocation 
-                ? 'Calculating...' 
-                : 'Location not available'
-            }
-          </Text>
+          
+          {/* Right side - Additional venue info from Best Time */}
+          {place.bestTimeData?.venueInfo && (
+            <View style={styles.rightInfo}>
+              {place.bestTimeData.venueInfo.reviews && (
+                <View style={styles.rightInfoRow}>
+                  <MaterialIcons name="rate-review" size={14} color="#666" />
+                  <Text style={styles.rightInfoText}>
+                    {place.bestTimeData.venueInfo.reviews} reviews
+                  </Text>
+                </View>
+              )}
+              
+              {place.bestTimeData.venueInfo.priceLevel && (
+                <View style={styles.rightInfoRow}>
+                  <MaterialIcons name="attach-money" size={14} color="#666" />
+                  <Text style={styles.rightInfoText}>
+                    Price: {'$'.repeat(place.bestTimeData.venueInfo.priceLevel)}
+                  </Text>
+                </View>
+              )}
+              
+              {place.bestTimeData.venueInfo.dwellTimeAvg && (
+                <View style={styles.rightInfoRow}>
+                  <MaterialIcons name="access-time" size={14} color="#666" />
+                  <Text style={styles.rightInfoText}>
+                    Avg. stay: {Math.round(place.bestTimeData.venueInfo.dwellTimeAvg)} min
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
         
-        {/* Opening Status */}
-        {place.opening_hours?.open_now !== undefined && (
-          <View style={styles.infoRow}>
-            <MaterialIcons 
-              name={place.opening_hours.open_now ? "check-circle" : "cancel"} 
-              size={14} 
-              color={place.opening_hours.open_now ? "#4CAF50" : "#F44336"} 
-            />
-            <Text style={[styles.infoText, { color: place.opening_hours.open_now ? "#4CAF50" : "#F44336" }]}>
-              {place.opening_hours.open_now ? 'Open Now' : 'Closed'}
-            </Text>
-          </View>
+        {/* Best Time Data - Busyness Information */}
+        {place.bestTimeData && (
+          <>
+            {/* Busyness Level */}
+            <View style={styles.infoRow}>
+              <MaterialIcons name="people" size={14} color="#FF6B35" />
+              <Text style={styles.infoText}>
+                {place.bestTimeData.isLiveDataAvailable 
+                  ? `Live: ${place.bestTimeData.liveBusyness}/100 busy`
+                  : `Forecast: ${place.bestTimeData.forecastedBusyness}/100 busy`
+                }
+                {place.bestTimeData.timeRange && (
+                  <Text style={styles.timeRangeText}>
+                    {' '}({place.bestTimeData.timeRange.start}-{place.bestTimeData.timeRange.end})
+                  </Text>
+                )}
+              </Text>
+            </View>
+            
+            {/* Busyness Indicator */}
+            <View style={styles.busynessContainer}>
+              <View style={styles.busynessBar}>
+                <View 
+                  style={[
+                    styles.busynessFill, 
+                    { 
+                      width: `${place.bestTimeData.isLiveDataAvailable 
+                        ? (place.bestTimeData.liveBusyness || 0)
+                        : (place.bestTimeData.forecastedBusyness || 0)
+                      }%`,
+                      backgroundColor: getBusynessColor(
+                        place.bestTimeData.isLiveDataAvailable 
+                          ? (place.bestTimeData.liveBusyness || 0)
+                          : (place.bestTimeData.forecastedBusyness || 0)
+                      )
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.busynessLabel}>
+                {getBusynessLabel(
+                  place.bestTimeData.isLiveDataAvailable 
+                    ? (place.bestTimeData.liveBusyness || 0)
+                    : (place.bestTimeData.forecastedBusyness || 0)
+                )}
+              </Text>
+            </View>
+          </>
         )}
       </View>
 
@@ -162,5 +259,55 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     marginLeft: 8,
+  },
+  timeRangeText: {
+    fontSize: 11,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  busynessContainer: {
+    marginVertical: 8,
+  },
+  busynessBar: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  busynessFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  busynessLabel: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  mainInfoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  leftInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  rightInfo: {
+    alignItems: 'flex-end',
+    minWidth: 120,
+  },
+  rightInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    justifyContent: 'flex-end',
+  },
+  rightInfoText: {
+    fontSize: 12,
+    marginLeft: 6,
+    color: '#333',
+    textAlign: 'right',
   },
 });

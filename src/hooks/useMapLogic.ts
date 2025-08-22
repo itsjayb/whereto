@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Alert, Platform, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { Region } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import { PlaceResult, VenueType } from '../types/venue';
 import { fetchVenuesWithRadius } from '../utils/venueSearchUtils';
 import { DEFAULT_REGION, SEARCH_RADIUS } from '../constants/venueTypes';
+import { getLiveForecast, BestTimeForecastResponse } from '../lib/bestTimeApi';
 
 interface UseMapLogicProps {
   apiKey: string;
@@ -12,6 +14,7 @@ interface UseMapLogicProps {
 }
 
 export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
+  const mapRef = useRef<MapView>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +27,7 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
   const [alwaysShowTooltips, setAlwaysShowTooltips] = useState(false);
   const [isUpdatingVenues, setIsUpdatingVenues] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showUserMarkers, setShowUserMarkers] = useState(false);
   const lastSearchRadius = useRef(SEARCH_RADIUS.DEFAULT);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -84,7 +88,6 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     const radiusChange = Math.abs(newRadius - lastSearchRadius.current) / lastSearchRadius.current;
     
     if (radiusChange > 0.5) {
-      console.log(`Radius changed from ${lastSearchRadius.current}m to ${newRadius}m`);
       lastSearchRadius.current = newRadius;
       
       // Debounce the search to avoid too many API calls
@@ -110,14 +113,12 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
         
         if (status !== 'granted') {
           // Show modal only if permission is not granted
-          console.log('Location permission not granted, showing modal');
           setShowLocationModal(true);
           setIsLoading(false);
           return;
         }
 
         // Permission is granted, get current location
-        console.log('Location permission granted, getting current location');
         let currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
@@ -157,7 +158,8 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     // Auto-close modal when venue type changes or is cleared
     setShowCustomTooltip(false);
     setSelectedVenue(null);
-  }, [selectedType, location, fetchVenuesWithRadiusCallback, currentRadius]);
+    setShowUserMarkers(false);
+  }, [selectedType, location, fetchVenuesWithRadiusCallback]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -168,16 +170,80 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     };
   }, []);
 
+  // Function to zoom to a specific venue
+  const zoomToVenue = useCallback((place: PlaceResult) => {
+    if (!mapRef.current) return;
+    
+    // Zoom to a very close level to see the establishment clearly
+    const zoomedRegion = {
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      latitudeDelta: 0.001, // Very close zoom
+      longitudeDelta: 0.001,
+    };
+    
+    mapRef.current.animateToRegion(zoomedRegion, 1000); // 1 second animation
+  }, []);
+
   // Handle marker press
-  const handleMarkerPress = useCallback((place: PlaceResult) => {
+  const handleMarkerPress = useCallback(async (place: PlaceResult) => {
+    // Zoom to the venue first
+    zoomToVenue(place);
+    
     setSelectedVenue(place);
     setShowCustomTooltip(true);
+    setShowUserMarkers(true);
+    
+    // Call getLiveForecast and store the data
+    try {
+      console.log('🔍 Calling Best Time API for venue:', place.name);
+      const forecastResponse = await getLiveForecast({
+        venue_name: place.name,
+        venue_address: place.vicinity || ''
+      });
+      
+      console.log('✅ Best Time API Response:', JSON.stringify(forecastResponse, null, 2));
+      
+      // Parse and store the Best Time data
+      if (forecastResponse.analysis && forecastResponse.venue_info) {
+        const bestTimeData = {
+          liveBusyness: forecastResponse.analysis.venue_live_busyness_available 
+            ? forecastResponse.analysis.venue_live_busyness 
+            : undefined,
+          forecastedBusyness: forecastResponse.analysis.venue_forecasted_busyness,
+          isLiveDataAvailable: forecastResponse.analysis.venue_live_busyness_available,
+          timeRange: {
+            start: forecastResponse.analysis.hour_start_12 || `${forecastResponse.analysis.hour_start}H`,
+            end: forecastResponse.analysis.hour_end_12 || `${forecastResponse.analysis.hour_end}H`
+          },
+          venueInfo: {
+            rating: forecastResponse.venue_info.rating,
+            reviews: forecastResponse.venue_info.reviews,
+            priceLevel: forecastResponse.venue_info.price_level,
+            dwellTimeAvg: forecastResponse.venue_info.venue_dwell_time_avg,
+            openStatus: forecastResponse.venue_info.venue_open
+          }
+        };
+        
+        // Update the selected venue with Best Time data
+        setSelectedVenue({
+          ...place,
+          bestTimeData
+        });
+        
+        console.log('📊 Parsed Best Time data:', bestTimeData);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error calling getLiveForecast:', error);
+    }
   }, []);
 
   // Handle tooltip close
   const handleTooltipClose = useCallback(() => {
     setShowCustomTooltip(false);
     setSelectedVenue(null);
+    setShowUserMarkers(false);
   }, []);
 
   // Toggle tooltips
@@ -280,6 +346,10 @@ export const useMapLogic = ({ apiKey, selectedType }: UseMapLogicProps) => {
     alwaysShowTooltips,
     isUpdatingVenues,
     showLocationModal,
+    showUserMarkers,
+    
+    // Refs
+    mapRef,
     
     // Handlers
     handleRegionChangeComplete,

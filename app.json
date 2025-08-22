@@ -3,6 +3,7 @@
     "name": "whereto",
     "slug": "whereto",
     "version": "1.0.0",
+    "buildNumber": "2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,6 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.where.to",
       "teamId": "CL3Y4J29A3",
+      "version": "1.0.0",
+      "buildNumber": "2",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses location to show your position on the map.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location to show your position on the map."

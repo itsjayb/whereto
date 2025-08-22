@@ -23,7 +23,6 @@ export default function LocationPermissionModal({
   onRequestPermission,
   onDismiss,
 }: LocationPermissionModalProps) {
-  console.log('LocationPermissionModal - visible:', visible);
   
   return (
     <Modal

@@ -15,7 +15,6 @@ export default function App() {
 
   const handleVenueTypeSelect = (type: VenueType) => {
     setSelectedVenueType(type);
-    console.log('Selected venue type:', type);
   };
 
   return (
